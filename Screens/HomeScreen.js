@@ -46,7 +46,7 @@ const HomeScreen = () => {
                 <TouchableOpacity onPress={logout}>
                     <Image style={tw('h-10 w-10 rounded-full')} source={{uri: user.photoURL}} />
                 </TouchableOpacity>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate("Modal")}>
                     <Image style={tw('h-10 w-10 rounded-full')} source={require("../logo.png")} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => navigation.navigate("Chat")}>
@@ -92,7 +92,7 @@ const HomeScreen = () => {
                     renderCard={card => (
                         <View key={card.id} style={tw("relative bg-white h-4/5 rounded-xl")}>
                             <Image source={{uri: card.photoURL}} style={tw("h-full w-full rounded-xl")} />
-                            <View style={[tw("bg-white w-full h-20 absolute bottom-0 justify-between px-6 py-2 items-between flex-row rounded-b-xl"), styles.cardShadow,]}>
+                            <View style={[tw("bg-white w-full h-20 absolute bottom-0 justify-between px-6 py-2 items-center flex-row rounded-b-xl"), styles.cardShadow,]}>
                                 <View>
                                     <Text style={tw("text-xl font-bold")}>{card.firstName} {card.lastName}</Text>
                                     <Text>{card.job}</Text>
