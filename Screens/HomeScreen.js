@@ -1,11 +1,13 @@
 import { useNavigation } from '@react-navigation/core'
-import React, { useLayoutEffect, useRef } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { View, Text, Button, TouchableOpacity, Image, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAuth from '../hooks/useAuth';
 import tw from "tailwind-rn"
 import { AntDesign, Entypo, Ionicons } from "@expo/vector-icons"
 import Swiper from "react-native-deck-swiper";
+import { collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, where } from '@firebase/firestore';
+import { db } from '../Firebase';
 
 const DUMMY_DATA = [
     {
@@ -38,7 +40,77 @@ const HomeScreen = () => {
 
     const navigation = useNavigation();
     const { user, logout } = useAuth();
+    const [profiles, setProfiles] = useState([]);
     const swipeRef = useRef(null);
+
+    useLayoutEffect(() => (
+        onSnapshot(doc(db, "users", user.uid), (snapshot) => {
+            if (!snapshot.exists()) {
+                navigation.navigate("Modal");
+            }
+        })
+    ), [])
+
+    useEffect(() => {
+        let unsub;
+        const fetchCards = async () => {
+            const passes = await getDocs(collection(db, "users", user.uid, "passes")).then(
+                (snapshot) => snapshot.docs.map((doc) => doc.id)
+            )
+            const swipes = await getDocs(collection(db, "users", user.uid, "swipes")).then(
+                (snapshot) => snapshot.docs.map((doc) => doc.id)
+            )
+            const passedUserIds = passes.length > 0 ? passes : ['test'];
+            const swipedUserIds = swipes.length > 0 ? swipes : ['test'];
+            unsub = onSnapshot(
+                query(
+                    collection(db, "users"),
+                    where("id", "not-in", [...passedUserIds, ...swipedUserIds])
+                ), 
+                snapshot => {
+                    setProfiles(
+                        snapshot.docs.filter(doc => doc.id !== user.uid).map(doc => ({
+                            id: doc.id,
+                            ...doc.data(),
+                        }))
+                    )
+                }
+            )
+        }
+        fetchCards();
+        return unsub;
+    }, [db])
+
+    const swipeLeft = (cardIndex) => {
+        if (!profiles[cardIndex]) return;
+
+        const userSwiped = profiles[cardIndex];
+
+        setDoc(doc(db, "users", user.uid, "passes", userSwiped.id), userSwiped);
+    }
+
+    const swipeRight = async (cardIndex) => {
+        if (!profiles[cardIndex]) return;
+
+        const userSwiped = profiles[cardIndex];
+        const loggedInProfile = await (await getDoc(doc(db, "users", user.uid))).data();
+
+        getDoc(
+            doc(
+                db, "users", userSwiped.id, "swipes", user.uid
+            )
+        ).then(
+            (documentSnapshot) => {
+                if (documentSnapshot.exists()) {
+
+                } else {
+                    
+                }
+            }
+        )
+
+        setDoc(doc(db, "users", user.uid, "swipes", userSwiped.id), userSwiped);
+    }
 
     return (
         <SafeAreaView style={tw("flex-1")}>
@@ -58,15 +130,17 @@ const HomeScreen = () => {
                 <Swiper 
                     ref={swipeRef}
                     containerStyle={{backgroundColor: "transparent"}}
-                    cards={DUMMY_DATA}
+                    cards={profiles}
                     stackSize={5}
                     cardIndex={0}
                     animateCardOpacity
-                    onSwipedLeft={() => {
+                    onSwipedLeft={(cardIndex) => {
                         console.log("Swipe NOPE")
+                        swipeLeft(cardIndex);
                     }}
-                    onSwipedRight={() => {
+                    onSwipedRight={(cardIndex) => {
                         console.log("Swipe Match")
+                        swipeRight(cardIndex);
                     }}
                     backgroundColor={"#4fd0e9"}
                     overlayLabels={{
@@ -89,18 +163,32 @@ const HomeScreen = () => {
                         },
                     }}
                     verticalSwipe={false}
-                    renderCard={card => (
+                    renderCard={card => card ? (
                         <View key={card.id} style={tw("relative bg-white h-4/5 rounded-xl")}>
                             <Image source={{uri: card.photoURL}} style={tw("h-full w-full rounded-xl")} />
                             <View style={[tw("bg-white w-full h-20 absolute bottom-0 justify-between px-6 py-2 items-center flex-row rounded-b-xl"), styles.cardShadow,]}>
                                 <View>
-                                    <Text style={tw("text-xl font-bold")}>{card.firstName} {card.lastName}</Text>
+                                    <Text style={tw("text-xl font-bold")}>{card.displayName}</Text>
                                     <Text>{card.job}</Text>
                                 </View>
                                 <View>
                                     <Text style={tw("text-2xl font-bold")}>{card.age}</Text>
                                 </View>
                             </View>
+                        </View>
+                    ) : (
+                        <View style={[
+                                tw("relative bg-white h-4/5 rounded-xl justify-center items-center"),
+                                styles.cardShadow,
+                            ]}
+                        >
+                            <Text style={tw("text-xl font-bold pb-5")}>No more profiles</Text>
+                            <Image 
+                                style={tw("h-60 w-60")}
+                                height={30}
+                                width={30}
+                                source={{uri: "https://links.papareact.com/6gb"}}
+                            />
                         </View>
                     )}
                 />
