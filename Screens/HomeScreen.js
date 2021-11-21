@@ -6,8 +6,9 @@ import useAuth from '../hooks/useAuth';
 import tw from "tailwind-rn"
 import { AntDesign, Entypo, Ionicons } from "@expo/vector-icons"
 import Swiper from "react-native-deck-swiper";
-import { collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, where } from '@firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from '@firebase/firestore';
 import { db } from '../Firebase';
+import generateId from '../lib/generateId';
 
 const DUMMY_DATA = [
     {
@@ -94,7 +95,6 @@ const HomeScreen = () => {
 
         const userSwiped = profiles[cardIndex];
         const loggedInProfile = await (await getDoc(doc(db, "users", user.uid))).data();
-
         getDoc(
             doc(
                 db, "users", userSwiped.id, "swipes", user.uid
@@ -102,14 +102,24 @@ const HomeScreen = () => {
         ).then(
             (documentSnapshot) => {
                 if (documentSnapshot.exists()) {
-
+                    setDoc(doc(db, "users", user.uid, "swipes", userSwiped.id), userSwiped);
+                    console.log(`Hurray you matched with ${userSwiped.displayName}`)
+                    setDoc(doc(db, "matches", generateId(user.uid, userSwiped.id)),{
+                        users: {
+                            [user.uid]: loggedInProfile,
+                            [userSwiped.id]: userSwiped
+                        },
+                        userMatched: [user.uid, userSwiped.id],
+                        timestamp: serverTimestamp(),
+                    })
+                    navigation.navigate("Match", {
+                        loggedInProfile, userSwiped,
+                    })
                 } else {
-                    
+                    setDoc(doc(db, "users", user.uid, "swipes", userSwiped.id), userSwiped);           
                 }
             }
         )
-
-        setDoc(doc(db, "users", user.uid, "swipes", userSwiped.id), userSwiped);
     }
 
     return (
@@ -121,7 +131,7 @@ const HomeScreen = () => {
                 <TouchableOpacity onPress={() => navigation.navigate("Modal")}>
                     <Image style={tw('h-10 w-10 rounded-full')} source={require("../logo.png")} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => navigation.navigate("Chat")}>
+                <TouchableOpacity onPress={() => navigation.navigate("Match")}>
                     <Ionicons name="chatbubbles-sharp" size={30} color="#ff5864" />
                 </TouchableOpacity>
             </View>
