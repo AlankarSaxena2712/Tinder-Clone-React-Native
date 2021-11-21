@@ -4,10 +4,10 @@
     "slug": "tinder",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/tinder.png",
     "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
+      "image": "./assets/tinder.png",
+      "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
     "updates": {
@@ -27,7 +27,7 @@
       "package": "host.exp.exponent"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/tinder.png"
     }
   }
 }
